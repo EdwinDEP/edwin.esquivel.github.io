@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandas — Limpieza de Datos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@700;800&family=Syne+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e14;
+    --surface: #13171f;
+    --border: #1e2530;
+    --accent: #00e5a0;
+    --accent2: #3b82f6;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    padding: 48px 32px;
+  }
+
+  header {
+    max-width: 1300px;
+    margin: 0 auto 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-left: 3px solid var(--accent);
+    padding-left: 24px;
+  }
+
+  .tag {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+    letter-spacing: -1px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .filters {
+    max-width: 1300px;
+    margin: 0 auto 28px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all .2s;
+    border-radius: 2px;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,229,160,.06);
+  }
+
+  .wrapper {
+    max-width: 1300px;
+    margin: 0 auto;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead tr {
+    background: #0d1117;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  th {
+    padding: 14px 18px;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,.03); }
+
+  tbody tr[data-cat="nulos"] td:first-child::before { background: var(--accent); }
+  tbody tr[data-cat="tipos"] td:first-child::before { background: var(--accent2); }
+  tbody tr[data-cat="duplicados"] td:first-child::before { background: var(--accent3); }
+  tbody tr[data-cat="texto"] td:first-child::before { background: #a78bfa; }
+  tbody tr[data-cat="outliers"] td:first-child::before { background: #f87171; }
+  tbody tr[data-cat="indice"] td:first-child::before { background: #34d399; }
+  tbody tr[data-cat="renombrar"] td:first-child::before { background: #fb923c; }
+  tbody tr[data-cat="explorar"] td:first-child::before { background: #22d3ee; }
+  tbody tr[data-cat="importar"] td:first-child::before { background: #e879f9; }
+
+  td {
+    padding: 13px 18px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  td:first-child {
+    position: relative;
+    padding-left: 30px;
+  }
+
+  td:first-child::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .cmd {
+    font-family: 'Syne Mono', monospace;
+    font-size: 13px;
+    color: #fff;
+    font-weight: 400;
+  }
+
+  .desc { color: #94a3b8; font-size: 12px; }
+
+  .example {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 12px;
+    font-family: 'Syne Mono', monospace;
+    font-size: 11.5px;
+    color: #a5f3d0;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge-nulos    { background: rgba(0,229,160,.12); color: var(--accent); }
+  .badge-tipos    { background: rgba(59,130,246,.12); color: var(--accent2); }
+  .badge-duplicados { background: rgba(245,158,11,.12); color: var(--accent3); }
+  .badge-texto    { background: rgba(167,139,250,.12); color: #a78bfa; }
+  .badge-outliers { background: rgba(248,113,113,.12); color: #f87171; }
+  .badge-indice   { background: rgba(52,211,153,.12); color: #34d399; }
+  .badge-renombrar{ background: rgba(251,146,60,.12); color: #fb923c; }
+  .badge-explorar { background: rgba(34,211,238,.12); color: #22d3ee; }
+  .badge-importar { background: rgba(232,121,249,.12); color: #e879f9; }
+
+  .output-tag {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .hidden { display: none; }
+
+  footer {
+    max-width: 1300px;
+    margin: 32px auto 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 700px) {
+    body { padding: 24px 12px; }
+    td, th { padding: 10px 10px; }
+    .example { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="tag">// Referencia Técnica</p>
+  <h1>Pandas <span>Limpieza</span><br>de Datos</h1>
+  <p class="subtitle">Comandos esenciales para preparar y depurar conjuntos de datos</p>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="filter('all', this)">Todos</button>
+  <button class="filter-btn" onclick="filter('explorar', this)">🔍 Exploración</button>
+  <button class="filter-btn" onclick="filter('importar', this)">📥 Importación</button>
+  <button class="filter-btn" onclick="filter('nulos', this)">⬜ Nulos</button>
+  <button class="filter-btn" onclick="filter('duplicados', this)">📋 Duplicados</button>
+  <button class="filter-btn" onclick="filter('tipos', this)">🔢 Tipos</button>
+  <button class="filter-btn" onclick="filter('texto', this)">🔤 Texto</button>
+  <button class="filter-btn" onclick="filter('outliers', this)">📊 Outliers</button>
+  <button class="filter-btn" onclick="filter('indice', this)">🔑 Índice</button>
+  <button class="filter-btn" onclick="filter('renombrar', this)">✏️ Renombrar</button>
+</div>
+
+<div class="wrapper">
+<table id="tabla">
+  <thead>
+    <tr>
+      <th>Comando</th>
+      <th>Categoría</th>
+      <th>Descripción</th>
+      <th>Ejemplo</th>
+      <th>Retorna</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- IMPORTACIÓN -->
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_csv()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Importa un archivo CSV (o TSV) a un DataFrame. Soporta encoding, separador, fechas y más.</td>
+      <td><pre class="example">df = pd.read_csv('datos.csv', sep=',',
+        encoding='utf-8',
+        parse_dates=['fecha'])</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_excel()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Lee archivos .xlsx o .xls. Permite elegir la hoja y rango de celdas.</td>
+      <td><pre class="example">df = pd.read_excel('reporte.xlsx',
+        sheet_name='Ventas',
+        header=0)</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_sql()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Ejecuta una consulta SQL sobre una conexión (SQLAlchemy, sqlite3, etc.) y devuelve el resultado.</td>
+      <td><pre class="example">from sqlalchemy import create_engine
+engine = create_engine('sqlite:///bd.db')
+df = pd.read_sql('SELECT * FROM clientes
+  WHERE activo = 1', con=engine)</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_sql_table()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Importa una tabla completa de una base de datos relacional usando SQLAlchemy.</td>
+      <td><pre class="example">df = pd.read_sql_table('productos',
+        con=engine,
+        schema='public')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_json()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Carga datos desde un archivo JSON o una cadena JSON. Ideal para respuestas de APIs REST.</td>
+      <td><pre class="example">df = pd.read_json('datos.json',
+        orient='records')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.json_normalize()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Aplana un JSON anidado (respuesta de API) en un DataFrame tabular.</td>
+      <td><pre class="example">import requests, pandas as pd
+resp = requests.get('https://api.ejemplo.com/data')
+df = pd.json_normalize(resp.json(),
+        record_path='items')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_html()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Hace web scraping de tablas HTML en una URL o cadena HTML. Devuelve una lista de DataFrames.</td>
+      <td><pre class="example">tablas = pd.read_html(
+  'https://ejemplo.com/estadisticas')
+df = tablas[0]  # primera tabla</pre></td>
+      <td class="desc output-tag">list[DataFrame]</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_parquet()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Lee archivos Parquet, formato columnar eficiente usado en Big Data y data lakes.</td>
+      <td><pre class="example">df = pd.read_parquet('datos.parquet',
+        columns=['id','monto','fecha'])</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="importar">
+      <td><span class="cmd">pd.read_clipboard()</span></td>
+      <td><span class="badge badge-importar">Importar</span></td>
+      <td class="desc">Importa datos tabulares copiados en el portapapeles (útil desde Excel o una web).</td>
+      <td><pre class="example"># Copiar tabla en Excel, luego:
+df = pd.read_clipboard(sep='\t')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+    <!-- EXPLORACIÓN -->
+    <tr data-cat="explorar">
+      <td><span class="cmd">df.info()</span></td>
+      <td><span class="badge badge-explorar">Explorar</span></td>
+      <td class="desc">Muestra tipos de datos, valores no nulos y uso de memoria de cada columna.</td>
+      <td><pre class="example">df.info()</pre></td>
+      <td class="desc output-tag">None (imprime)</td>
+    </tr>
+    <tr data-cat="explorar">
+      <td><span class="cmd">df.describe()</span></td>
+      <td><span class="badge badge-explorar">Explorar</span></td>
+      <td class="desc">Estadísticas descriptivas: media, desv. estándar, mín./máx. y percentiles.</td>
+      <td><pre class="example">df.describe(include='all')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="explorar">
+      <td><span class="cmd">df.shape</span></td>
+      <td><span class="badge badge-explorar">Explorar</span></td>
+      <td class="desc">Devuelve la dimensión del DataFrame (filas, columnas).</td>
+      <td><pre class="example">rows, cols = df.shape</pre></td>
+      <td class="desc output-tag">tuple</td>
+    </tr>
+    <tr data-cat="explorar">
+      <td><span class="cmd">df.dtypes</span></td>
+      <td><span class="badge badge-explorar">Explorar</span></td>
+      <td class="desc">Tipo de dato de cada columna.</td>
+      <td><pre class="example">df.dtypes</pre></td>
+      <td class="desc output-tag">Series</td>
+    </tr>
+    <tr data-cat="explorar">
+      <td><span class="cmd">df.value_counts()</span></td>
+      <td><span class="badge badge-explorar">Explorar</span></td>
+      <td class="desc">Frecuencia de valores únicos en una columna.</td>
+      <td><pre class="example">df['col'].value_counts()</pre></td>
+      <td class="desc output-tag">Series</td>
+    </tr>
+
+    <!-- NULOS -->
+    <tr data-cat="nulos">
+      <td><span class="cmd">df.isnull()</span></td>
+      <td><span class="badge badge-nulos">Nulos</span></td>
+      <td class="desc">Máscara booleana que indica dónde hay valores NaN.</td>
+      <td><pre class="example">df.isnull().sum()</pre></td>
+      <td class="desc output-tag">DataFrame / Series</td>
+    </tr>
+    <tr data-cat="nulos">
+      <td><span class="cmd">df.notnull()</span></td>
+      <td><span class="badge badge-nulos">Nulos</span></td>
+      <td class="desc">Inverso de isnull(): True donde el valor existe.</td>
+      <td><pre class="example">df[df['col'].notnull()]</pre></td>
+      <td class="desc output-tag">DataFrame / Series</td>
+    </tr>
+    <tr data-cat="nulos">
+      <td><span class="cmd">df.dropna()</span></td>
+      <td><span class="badge badge-nulos">Nulos</span></td>
+      <td class="desc">Elimina filas (o columnas) con al menos un NaN. Configurable con thresh y subset.</td>
+      <td><pre class="example">df.dropna(subset=['edad','nombre'])</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="nulos">
+      <td><span class="cmd">df.fillna()</span></td>
+      <td><span class="badge badge-nulos">Nulos</span></td>
+      <td class="desc">Rellena NaN con un valor fijo, la media, la mediana u otro método.</td>
+      <td><pre class="example">df['precio'].fillna(df['precio'].median())</pre></td>
+      <td class="desc output-tag">DataFrame / Series</td>
+    </tr>
+    <tr data-cat="nulos">
+      <td><span class="cmd">df.interpolate()</span></td>
+      <td><span class="badge badge-nulos">Nulos</span></td>
+      <td class="desc">Estima NaN mediante interpolación lineal o de tiempo para series ordenadas.</td>
+      <td><pre class="example">df['temp'].interpolate(method='linear')</pre></td>
+      <td class="desc output-tag">Series</td>
+    </tr>
+
+    <!-- DUPLICADOS -->
+    <tr data-cat="duplicados">
+      <td><span class="cmd">df.duplicated()</span></td>
+      <td><span class="badge badge-duplicados">Duplicados</span></td>
+      <td class="desc">Marca como True las filas duplicadas. Acepta subset y keep.</td>
+      <td><pre class="example">df.duplicated(subset=['id']).sum()</pre></td>
+      <td class="desc output-tag">Series (bool)</td>
+    </tr>
+    <tr data-cat="duplicados">
+      <td><span class="cmd">df.drop_duplicates()</span></td>
+      <td><span class="badge badge-duplicados">Duplicados</span></td>
+      <td class="desc">Elimina filas duplicadas, conservando la primera (o última) ocurrencia.</td>
+      <td><pre class="example">df.drop_duplicates(keep='first')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+    <!-- TIPOS DE DATOS -->
+    <tr data-cat="tipos">
+      <td><span class="cmd">df.astype()</span></td>
+      <td><span class="badge badge-tipos">Tipos</span></td>
+      <td class="desc">Convierte el tipo de dato de una o varias columnas.</td>
+      <td><pre class="example">df['precio'] = df['precio'].astype(float)</pre></td>
+      <td class="desc output-tag">Series / DataFrame</td>
+    </tr>
+    <tr data-cat="tipos">
+      <td><span class="cmd">pd.to_numeric()</span></td>
+      <td><span class="badge badge-tipos">Tipos</span></td>
+      <td class="desc">Convierte a numérico; con errors='coerce' transforma errores en NaN.</td>
+      <td><pre class="example">pd.to_numeric(df['col'], errors='coerce')</pre></td>
+      <td class="desc output-tag">Series</td>
+    </tr>
+    <tr data-cat="tipos">
+      <td><span class="cmd">pd.to_datetime()</span></td>
+      <td><span class="badge badge-tipos">Tipos</span></td>
+      <td class="desc">Convierte cadenas o números a tipo datetime.</td>
+      <td><pre class="example">df['fecha'] = pd.to_datetime(df['fecha'], format='%Y-%m-%d')</pre></td>
+      <td class="desc output-tag">Series (datetime)</td>
+    </tr>
+    <tr data-cat="tipos">
+      <td><span class="cmd">df.convert_dtypes()</span></td>
+      <td><span class="badge badge-tipos">Tipos</span></td>
+      <td class="desc">Infiere y convierte automáticamente al tipo más apropiado con soporte para NA.</td>
+      <td><pre class="example">df = df.convert_dtypes()</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+    <!-- TEXTO -->
+    <tr data-cat="texto">
+      <td><span class="cmd">str.strip()</span></td>
+      <td><span class="badge badge-texto">Texto</span></td>
+      <td class="desc">Elimina espacios en blanco al inicio y al final de cadenas.</td>
+      <td><pre class="example">df['nombre'] = df['nombre'].str.strip()</pre></td>
+      <td class="desc output-tag">Series (str)</td>
+    </tr>
+    <tr data-cat="texto">
+      <td><span class="cmd">str.lower() / upper()</span></td>
+      <td><span class="badge badge-texto">Texto</span></td>
+      <td class="desc">Normaliza el texto a minúsculas o mayúsculas para evitar duplicados por caso.</td>
+      <td><pre class="example">df['ciudad'] = df['ciudad'].str.lower()</pre></td>
+      <td class="desc output-tag">Series (str)</td>
+    </tr>
+    <tr data-cat="texto">
+      <td><span class="cmd">str.replace()</span></td>
+      <td><span class="badge badge-texto">Texto</span></td>
+      <td class="desc">Sustituye patrones de texto; admite expresiones regulares.</td>
+      <td><pre class="example">df['tel'] = df['tel'].str.replace(r'\D', '', regex=True)</pre></td>
+      <td class="desc output-tag">Series (str)</td>
+    </tr>
+    <tr data-cat="texto">
+      <td><span class="cmd">str.contains()</span></td>
+      <td><span class="badge badge-texto">Texto</span></td>
+      <td class="desc">Filtra filas donde la columna contiene un patrón (regex o literal).</td>
+      <td><pre class="example">df[df['email'].str.contains('@', na=False)]</pre></td>
+      <td class="desc output-tag">Series (bool)</td>
+    </tr>
+    <tr data-cat="texto">
+      <td><span class="cmd">str.split()</span></td>
+      <td><span class="badge badge-texto">Texto</span></td>
+      <td class="desc">Divide cadenas y puede expandirlas en columnas separadas.</td>
+      <td><pre class="example">df[['nombre','apellido']] = df['nombre_completo'].str.split(' ', n=1, expand=True)</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+    <!-- OUTLIERS -->
+    <tr data-cat="outliers">
+      <td><span class="cmd">df.clip()</span></td>
+      <td><span class="badge badge-outliers">Outliers</span></td>
+      <td class="desc">Limita los valores a un rango [lower, upper] sin eliminar filas.</td>
+      <td><pre class="example">df['edad'] = df['edad'].clip(lower=0, upper=120)</pre></td>
+      <td class="desc output-tag">Series / DataFrame</td>
+    </tr>
+    <tr data-cat="outliers">
+      <td><span class="cmd">df.quantile()</span></td>
+      <td><span class="badge badge-outliers">Outliers</span></td>
+      <td class="desc">Calcula percentiles para definir umbrales de outliers (p.ej. método IQR).</td>
+      <td><pre class="example">Q1 = df['val'].quantile(0.25)
+Q3 = df['val'].quantile(0.75)
+IQR = Q3 - Q1</pre></td>
+      <td class="desc output-tag">float / Series</td>
+    </tr>
+    <tr data-cat="outliers">
+      <td><span class="cmd">df.where()</span></td>
+      <td><span class="badge badge-outliers">Outliers</span></td>
+      <td class="desc">Reemplaza con NaN (u otro valor) donde la condición es False.</td>
+      <td><pre class="example">df['val'].where(df['val'] < 1000, other=np.nan)</pre></td>
+      <td class="desc output-tag">Series</td>
+    </tr>
+
+    <!-- ÍNDICE -->
+    <tr data-cat="indice">
+      <td><span class="cmd">df.reset_index()</span></td>
+      <td><span class="badge badge-indice">Índice</span></td>
+      <td class="desc">Reinicia el índice a 0,1,2… opcionalmente moviendo el índice anterior a columna.</td>
+      <td><pre class="example">df.reset_index(drop=True, inplace=True)</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="indice">
+      <td><span class="cmd">df.set_index()</span></td>
+      <td><span class="badge badge-indice">Índice</span></td>
+      <td class="desc">Establece una columna como índice del DataFrame.</td>
+      <td><pre class="example">df = df.set_index('id_cliente')</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="indice">
+      <td><span class="cmd">df.sort_values()</span></td>
+      <td><span class="badge badge-indice">Índice</span></td>
+      <td class="desc">Ordena el DataFrame por una o varias columnas.</td>
+      <td><pre class="example">df.sort_values('fecha', ascending=True)</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+    <!-- RENOMBRAR / REESTRUCTURAR -->
+    <tr data-cat="renombrar">
+      <td><span class="cmd">df.rename()</span></td>
+      <td><span class="badge badge-renombrar">Renombrar</span></td>
+      <td class="desc">Cambia nombres de columnas o índices de forma selectiva.</td>
+      <td><pre class="example">df.rename(columns={'old':'new', 'age':'edad'})</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="renombrar">
+      <td><span class="cmd">df.drop()</span></td>
+      <td><span class="badge badge-renombrar">Renombrar</span></td>
+      <td class="desc">Elimina filas o columnas por nombre.</td>
+      <td><pre class="example">df.drop(columns=['col_irrelevante'])</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+    <tr data-cat="renombrar">
+      <td><span class="cmd">df.columns</span></td>
+      <td><span class="badge badge-renombrar">Renombrar</span></td>
+      <td class="desc">Lista o reemplaza todos los nombres de columna en bloque.</td>
+      <td><pre class="example">df.columns = df.columns.str.strip().str.lower().str.replace(' ','_')</pre></td>
+      <td class="desc output-tag">Index</td>
+    </tr>
+    <tr data-cat="renombrar">
+      <td><span class="cmd">df.melt()</span></td>
+      <td><span class="badge badge-renombrar">Renombrar</span></td>
+      <td class="desc">Convierte columnas anchas a formato largo (unpivot).</td>
+      <td><pre class="example">df.melt(id_vars=['id'], value_vars=['q1','q2'])</pre></td>
+      <td class="desc output-tag">DataFrame</td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<footer>
+  <span>🐼 pandas · python · data cleaning reference</span>
+  <span id="count">39 comandos</span>
+</footer>
+
+<script>
+  function filter(cat, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const rows = document.querySelectorAll('#tabla tbody tr');
+    let visible = 0;
+    rows.forEach(r => {
+      if (cat === 'all' || r.dataset.cat === cat) {
+        r.classList.remove('hidden');
+        visible++;
+      } else {
+        r.classList.add('hidden');
+      }
+    });
+    document.getElementById('count').textContent = visible + ' comando' + (visible !== 1 ? 's' : '');
+  }
+</script>
+</body>
+</html>
